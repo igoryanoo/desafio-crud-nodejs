@@ -1,5 +1,9 @@
 import { randomUUID } from 'node:crypto'
-import { buildRoutePath } from './utils/buildRoutePath'
+import { buildRoutePath } from './utils/buildRoutePath.js'
+import { Database } from './database.js'
+import { validator_id } from './middlewares/validator_id.js'
+
+const database = new Database()
 
 export const routes = [
     {
@@ -12,9 +16,9 @@ export const routes = [
                 id: randomUUID(),
                 title,
                 description,
-                created_at,
-                updated_at,
-                completed_at,
+                created_at: new Date(),
+                updated_at: null,
+                completed_at: null,
             }
 
             database.insert('tasks', task)
@@ -36,31 +40,6 @@ export const routes = [
             return res.end(JSON.stringify(tasks))
         }
     },
-    // - ANTIGO -
-    // {
-    //     method: 'PUT',
-    //     path: buildRoutePath('/tasks/:id'),
-    //     handler: (req, res) => {
-    //         const { id } = req.params
-    //         const { title, description } = req.body
-
-    //         const tasks_id = database.select('tasks')
-            
-    //         try {
-    //             if (tasks_id.find((task) => task.id === id)) {
-    //                 database.update('tasks', id, {
-    //                 title,
-    //                 description,
-    //                 })
-    //             }
-    //         } catch {
-    //             return res.writeHead(200).end("Tarefa não encontrada")
-    //         }
-            
-
-    //         return res.writeHead(204).end('')
-    //     }
-    // },
     {
         method: 'PUT',
         path: buildRoutePath('/tasks/:id'),
@@ -85,23 +64,23 @@ export const routes = [
     {
         method: 'DELETE',
         path: buildRoutePath('/tasks/:id'),
-        handler: (req, res => {
+        handler: (req, res) => {
             const { id } = req.params
 
             const task = validator_id(database, 'tasks', id, res)
             
             if(!task) {
-                return
+                return res.writeHead(404).end("Tarefa não encontrada")
             }
 
             database.delete('tasks', id)
 
             return res.writeHead(204).end()
-        })
+        }
     },
     {
         method: 'PATCH',
-        path: buildRoutePath('/tasks/:id/completea'),
+        path: buildRoutePath('/tasks/:id/complete'),
         handler: (req, res) => {
             const { id } = req.params
             const { completed_at } = req.body
@@ -109,12 +88,11 @@ export const routes = [
             const task = validator_id(database, 'tasks', id, res)
             
             if(!task) {
-                return
+                return res.writeHead(404).end("Tarefa não encontrada")
             }
 
             database.update('tasks', id, {
-            title,
-            description,
+            completed_at,
             })
 
             return res.writeHead(204).end('')
